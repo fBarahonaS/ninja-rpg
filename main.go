@@ -2,7 +2,7 @@ package main
 
 import (
 	"image"
-	"image/color"
+	_ "image/png"
 	"log"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -10,57 +10,72 @@ import (
 )
 
 const (
-	gameTitle    = ":: Ninja Hero RPG ::"
-	screenWidth  = 640
-	screenHeight = 480
-	tileSize     = 16
+	gameTitle              = ":: Ninja Hero RPG ::"
+	windowWidth            = 640
+	windowHeight           = 480
+	canvasWidth            = 320
+	canvasHeight           = 240
+	tileSize               = 16
+	canvasMiddleX          = canvasWidth / 2.0
+	canvasMiddleY          = canvasHeight / 2.0
+	tileMiddle             = tileSize / 2.0
+	playerInitialPositionX = canvasMiddleX - tileMiddle
+	playerInitialPositionY = canvasMiddleY - tileMiddle
+	playerInitialSpeed     = 2.0
 )
 
-var (
-	// Defining variable to handle player position
-	PlayerPosX  float64 = 100
-	PlayerPosY  float64 = 100
-	playerSpeed float64 = 4.0
-)
+type Sprite struct {
+	img       *ebiten.Image
+	positionX float64
+	positionY float64
+}
+
+type Player struct {
+	*Sprite
+	speed float64
+}
 
 type Game struct {
-	// Defining variable to handle player image
-	PlayerImg *ebiten.Image
+	player  *Player
+	tileSet *Sprite
 }
 
 func (g *Game) Update() error {
-	// Reacting to pressed keys
 	switch {
 	case ebiten.IsKeyPressed(ebiten.KeyArrowUp):
-		if PlayerPosY > 0 {
-			PlayerPosY -= playerSpeed
-		}
+		g.player.positionY = max(
+			g.player.positionY-g.player.speed,
+			0,
+		)
 	case ebiten.IsKeyPressed(ebiten.KeyArrowDown):
-		if PlayerPosY < screenHeight-tileSize {
-			PlayerPosY += playerSpeed
-		}
+		g.player.positionY = min(
+			g.player.positionY+g.player.speed,
+			canvasHeight-tileSize,
+		)
 	case ebiten.IsKeyPressed(ebiten.KeyArrowLeft):
-		if PlayerPosX > 0 {
-			PlayerPosX -= playerSpeed
-		}
+		g.player.positionX = max(
+			g.player.positionX-g.player.speed,
+			0,
+		)
 	case ebiten.IsKeyPressed(ebiten.KeyArrowRight):
-		if PlayerPosX < screenWidth-tileSize {
-			PlayerPosX += playerSpeed
-		}
+		g.player.positionX = min(
+			g.player.positionX+g.player.speed,
+			canvasWidth-tileSize,
+		)
 	}
 
 	return nil
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	screen.Fill(color.RGBA{121, 180, 255, 255})
-
 	options := &ebiten.DrawImageOptions{}
-	options.GeoM.Translate(PlayerPosX, PlayerPosY)
+	options.GeoM.Translate(g.tileSet.positionX, g.tileSet.positionY)
+	screen.DrawImage(g.tileSet.img, options)
 
-	// Drawing the player image within window
+	options = &ebiten.DrawImageOptions{}
+	options.GeoM.Translate(g.player.positionX, g.player.positionY)
 	screen.DrawImage(
-		g.PlayerImg.SubImage(
+		g.player.img.SubImage(
 			image.Rect(0, 0, tileSize, tileSize),
 		).(*ebiten.Image),
 		options,
@@ -68,23 +83,40 @@ func (g *Game) Draw(screen *ebiten.Image) {
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return ebiten.WindowSize()
+	return canvasWidth, canvasHeight
 }
 
 func main() {
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
-	ebiten.SetWindowSize(screenWidth, screenHeight)
+	ebiten.SetWindowSize(windowWidth, windowHeight)
 	ebiten.SetWindowTitle(gameTitle)
 
-	// Loading the player image
-	PlayerImg, _, err := ebitenutil.NewImageFromFile("assets/img/ninja.png")
+	// Loading images
+	tileSetImg, _, err := ebitenutil.NewImageFromFile("assets/maps/tileSetFloor.png")
 	if err != nil {
 		handleFatalTermination(err)
 	}
 
-	// Implementing the game instance
+	playerImg, _, err := ebitenutil.NewImageFromFile("assets/img/ninja.png")
+	if err != nil {
+		handleFatalTermination(err)
+	}
+
+	// Game instance
 	gameInstance := &Game{
-		PlayerImg: PlayerImg,
+		player: &Player{
+			Sprite: &Sprite{
+				img:       playerImg,
+				positionX: playerInitialPositionX,
+				positionY: playerInitialPositionY,
+			},
+			speed: playerInitialSpeed,
+		},
+		tileSet: &Sprite{
+			img:       tileSetImg,
+			positionX: 0,
+			positionY: 0,
+		},
 	}
 
 	if err := ebiten.RunGame(gameInstance); err != nil {
