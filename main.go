@@ -22,6 +22,10 @@ const (
 	playerInitialPositionX = canvasMiddleX - tileMiddle
 	playerInitialPositionY = canvasMiddleY - tileMiddle
 	playerInitialSpeed     = 2.0
+
+	// Just for now, we will use a fixed number of tiles per row.
+	// In the future, we can calculate this based on the image size.
+	tilesPerRow = 22
 )
 
 type Sprite struct {
@@ -36,8 +40,9 @@ type Player struct {
 }
 
 type Game struct {
-	player  *Player
-	tileSet *Sprite
+	player    *Player
+	tileSet   *ebiten.Image
+	levelSoil [][]int
 }
 
 func (g *Game) Update() error {
@@ -67,10 +72,28 @@ func (g *Game) Update() error {
 	return nil
 }
 
+func (g *Game) tileImgFromID(tileID int) *ebiten.Image {
+	currentY := (tileID / tilesPerRow) * tileSize
+	currentX := (tileID % tilesPerRow) * tileSize
+
+	return g.tileSet.SubImage(
+		image.Rect(currentX, currentY, currentX+tileSize, currentY+tileSize),
+	).(*ebiten.Image)
+}
+
 func (g *Game) Draw(screen *ebiten.Image) {
 	options := &ebiten.DrawImageOptions{}
-	options.GeoM.Translate(g.tileSet.positionX, g.tileSet.positionY)
-	screen.DrawImage(g.tileSet.img, options)
+
+	for row, cols := range g.levelSoil {
+		for col, tileID := range cols {
+			options.GeoM.Reset()
+			options.GeoM.Translate(float64(col*tileSize), float64(row*tileSize))
+			screen.DrawImage(
+				g.tileImgFromID(tileID),
+				options,
+			)
+		}
+	}
 
 	options = &ebiten.DrawImageOptions{}
 	options.GeoM.Translate(g.player.positionX, g.player.positionY)
@@ -112,10 +135,23 @@ func main() {
 			},
 			speed: playerInitialSpeed,
 		},
-		tileSet: &Sprite{
-			img:       tileSetImg,
-			positionX: 0,
-			positionY: 0,
+		tileSet: tileSetImg,
+		levelSoil: [][]int{
+			{466, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 469},
+			{484, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 550, 550, 550, 550, 550, 550, 486},
+			{484, 485, 485, 485, 485, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 486},
+			{484, 485, 485, 485, 485, 550, 550, 550, 550, 485, 485, 550, 550, 550, 550, 550, 550, 550, 550, 486},
+			{484, 485, 485, 550, 550, 550, 550, 485, 485, 485, 485, 485, 485, 550, 550, 550, 550, 550, 550, 486},
+			{484, 485, 485, 485, 550, 550, 550, 550, 550, 485, 485, 485, 485, 550, 550, 550, 550, 550, 550, 486},
+			{484, 485, 485, 485, 550, 550, 550, 485, 485, 485, 485, 485, 485, 550, 550, 550, 550, 550, 550, 486},
+			{484, 550, 550, 550, 550, 550, 550, 485, 485, 485, 485, 485, 485, 550, 550, 550, 550, 550, 550, 486},
+			{484, 550, 550, 550, 550, 550, 550, 485, 485, 485, 485, 485, 485, 485, 485, 550, 550, 550, 485, 486},
+			{484, 485, 550, 485, 550, 550, 550, 485, 485, 485, 485, 485, 485, 485, 485, 550, 550, 550, 485, 486},
+			{484, 485, 550, 485, 550, 550, 550, 485, 485, 485, 485, 485, 485, 485, 485, 550, 550, 550, 485, 486},
+			{484, 485, 550, 485, 550, 550, 550, 550, 550, 550, 485, 485, 485, 485, 485, 550, 550, 550, 485, 486},
+			{488, 485, 550, 485, 485, 550, 550, 550, 550, 550, 550, 550, 485, 485, 485, 550, 485, 550, 485, 486},
+			{510, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 513},
+			{532, 507, 507, 507, 507, 507, 507, 507, 507, 507, 507, 507, 507, 507, 507, 507, 507, 507, 507, 535},
 		},
 	}
 
