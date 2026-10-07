@@ -21,11 +21,9 @@ const (
 	tileMiddle             = tileSize / 2.0
 	playerInitialPositionX = canvasMiddleX - tileMiddle
 	playerInitialPositionY = canvasMiddleY - tileMiddle
+	worldFilePath          = "assets/maps/world1.ldtk"
+	playerSpriteImgPath    = "assets/img/ninja.png"
 	playerInitialSpeed     = 2.0
-
-	// Just for now, we will use a fixed number of tiles per row.
-	// In the future, we can calculate this based on the image size.
-	tilesPerRow = 22
 )
 
 type Sprite struct {
@@ -40,9 +38,9 @@ type Player struct {
 }
 
 type Game struct {
-	player    *Player
-	tileSet   *ebiten.Image
-	levelSoil [][]int
+	player  *Player
+	tileSet *ebiten.Image
+	world   *World
 }
 
 func (g *Game) Update() error {
@@ -72,27 +70,18 @@ func (g *Game) Update() error {
 	return nil
 }
 
-func (g *Game) tileImgFromID(tileID int) *ebiten.Image {
-	currentY := (tileID / tilesPerRow) * tileSize
-	currentX := (tileID % tilesPerRow) * tileSize
-
-	return g.tileSet.SubImage(
-		image.Rect(currentX, currentY, currentX+tileSize, currentY+tileSize),
-	).(*ebiten.Image)
-}
-
 func (g *Game) Draw(screen *ebiten.Image) {
 	options := &ebiten.DrawImageOptions{}
 
-	for row, cols := range g.levelSoil {
-		for col, tileID := range cols {
-			options.GeoM.Reset()
-			options.GeoM.Translate(float64(col*tileSize), float64(row*tileSize))
-			screen.DrawImage(
-				g.tileImgFromID(tileID),
-				options,
-			)
-		}
+	for _, tile := range g.world.Tiles {
+		options.GeoM.Reset()
+		options.GeoM.Translate(tile.PosX, tile.PosY)
+		screen.DrawImage(
+			g.tileSet.SubImage(
+				image.Rect(tile.SrcX, tile.SrcY, tile.SrcX+tileSize, tile.SrcY+tileSize),
+			).(*ebiten.Image),
+			options,
+		)
 	}
 
 	options = &ebiten.DrawImageOptions{}
@@ -114,13 +103,18 @@ func main() {
 	ebiten.SetWindowSize(windowWidth, windowHeight)
 	ebiten.SetWindowTitle(gameTitle)
 
-	// Loading images
-	tileSetImg, _, err := ebitenutil.NewImageFromFile("assets/maps/tileSetFloor.png")
+	world, err := LoadWorld(worldFilePath)
 	if err != nil {
 		handleFatalTermination(err)
 	}
 
-	playerImg, _, err := ebitenutil.NewImageFromFile("assets/img/ninja.png")
+	// Loading images
+	tileSetImg, _, err := ebitenutil.NewImageFromFile(world.TilesetPath)
+	if err != nil {
+		handleFatalTermination(err)
+	}
+
+	playerImg, _, err := ebitenutil.NewImageFromFile(playerSpriteImgPath)
 	if err != nil {
 		handleFatalTermination(err)
 	}
@@ -136,23 +130,7 @@ func main() {
 			speed: playerInitialSpeed,
 		},
 		tileSet: tileSetImg,
-		levelSoil: [][]int{
-			{466, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 463, 469},
-			{484, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 550, 550, 550, 550, 550, 550, 486},
-			{484, 485, 485, 485, 485, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 486},
-			{484, 485, 485, 485, 485, 550, 550, 550, 550, 485, 485, 550, 550, 550, 550, 550, 550, 550, 550, 486},
-			{484, 485, 485, 550, 550, 550, 550, 485, 485, 485, 485, 485, 485, 550, 550, 550, 550, 550, 550, 486},
-			{484, 485, 485, 485, 550, 550, 550, 550, 550, 485, 485, 485, 485, 550, 550, 550, 550, 550, 550, 486},
-			{484, 485, 485, 485, 550, 550, 550, 485, 485, 485, 485, 485, 485, 550, 550, 550, 550, 550, 550, 486},
-			{484, 550, 550, 550, 550, 550, 550, 485, 485, 485, 485, 485, 485, 550, 550, 550, 550, 550, 550, 486},
-			{484, 550, 550, 550, 550, 550, 550, 485, 485, 485, 485, 485, 485, 485, 485, 550, 550, 550, 485, 486},
-			{484, 485, 550, 485, 550, 550, 550, 485, 485, 485, 485, 485, 485, 485, 485, 550, 550, 550, 485, 486},
-			{484, 485, 550, 485, 550, 550, 550, 485, 485, 485, 485, 485, 485, 485, 485, 550, 550, 550, 485, 486},
-			{484, 485, 550, 485, 550, 550, 550, 550, 550, 550, 485, 485, 485, 485, 485, 550, 550, 550, 485, 486},
-			{488, 485, 550, 485, 485, 550, 550, 550, 550, 550, 550, 550, 485, 485, 485, 550, 485, 550, 485, 486},
-			{510, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 485, 513},
-			{532, 507, 507, 507, 507, 507, 507, 507, 507, 507, 507, 507, 507, 507, 507, 507, 507, 507, 507, 535},
-		},
+		world:   world,
 	}
 
 	if err := ebiten.RunGame(gameInstance); err != nil {
