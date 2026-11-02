@@ -21,7 +21,7 @@ const (
 	tileMiddle             = tileSize / 2.0
 	playerInitialPositionX = canvasMiddleX - tileMiddle
 	playerInitialPositionY = canvasMiddleY - tileMiddle
-	worldFilePath          = "assets/maps/world1.ldtk"
+	worldFilePath          = "assets/maps/worlds/world1.ldtk"
 	playerSpriteImgPath    = "assets/img/ninja.png"
 	playerInitialSpeed     = 2.0
 )
@@ -73,7 +73,7 @@ func (g *Game) Update() error {
 func (g *Game) Draw(screen *ebiten.Image) {
 	options := &ebiten.DrawImageOptions{}
 
-	for _, tile := range g.world.Tiles {
+	for _, tile := range g.world.Layers[0].Tiles {
 		options.GeoM.Reset()
 		options.GeoM.Translate(tile.PosX, tile.PosY)
 		screen.DrawImage(
@@ -109,7 +109,7 @@ func main() {
 	}
 
 	// Loading images
-	tileSetImg, _, err := ebitenutil.NewImageFromFile(world.TilesetPath)
+	tileSetImg, _, err := ebitenutil.NewImageFromFile(world.Layers[0].TilesetPath)
 	if err != nil {
 		handleFatalTermination(err)
 	}

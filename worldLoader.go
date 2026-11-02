@@ -19,6 +19,9 @@ type ldtkLayer struct {
 	TilesetPath string     `json:"__tilesetRelPath"`
 	IntGrid     []int      `json:"intGridCsv"`
 	Tiles       []ldtkTile `json:"autoLayerTiles"`
+	Identifier  string     `json:"identifier"`
+	Type        string     `json:"__type"`
+	GridTiles   []ldtkTile `json:"gridTiles"`
 }
 
 type ldtkLevel struct {
@@ -36,12 +39,16 @@ type WorldTile struct {
 	SrcX, SrcY int
 }
 
-type World struct {
-	Width       int
-	Height      int
-	IntGrid     []int
+type WorldLayer struct {
 	Tiles       []WorldTile
 	TilesetPath string
+}
+
+type World struct {
+	Width   int
+	Height  int
+	IntGrid []int
+	Layers  []WorldLayer
 }
 
 func LoadWorld(worldPath string) (*World, error) {
